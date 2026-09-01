@@ -61,6 +61,16 @@ export interface SupabaseNoteRow {
   created_at: string;
 }
 
+export interface TriageDayCount {
+  /** Local calendar date, e.g. "2026-09-01" */
+  date: string;
+  /** Human-friendly axis label, e.g. "Tue 1" */
+  label: string;
+  Low: number;
+  Medium: number;
+  High: number;
+}
+
 export interface ScenarioPreset {
   title: string;
   language: "English" | "Urdu" | "Roman Urdu";

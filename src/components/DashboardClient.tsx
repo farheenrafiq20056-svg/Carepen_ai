@@ -12,6 +12,7 @@ import { ClinicalResult, SavedNote, ScenarioPreset, UserProfile } from "@/types"
 import PresetSelector from "@/components/PresetSelector";
 import ResultView from "@/components/ResultView";
 import NoteHistory from "@/components/NoteHistory";
+import TriageTrendsCard from "@/components/TriageTrendsCard";
 import { VoiceInputControl } from "@/components/VoiceInputControl";
 import { SupportChatWidget } from "@/components/SupportChatWidget";
 import { signOutUser, fetchUserNotes, insertNote, deleteNote, reviewNote } from "@/lib/auth-utils";
@@ -287,6 +288,9 @@ export default function DashboardClient({ initialUser }: DashboardClientProps) {
             </div>
           </div>
         </div>
+
+        {/* Triage Trends — the doctor's own notes from the past 7 days */}
+        <TriageTrendsCard userId={currentUser.id} refreshKey={history.length} />
 
         <PresetSelector onSelectPreset={handleSelectPreset} selectedTitle={selectedPresetTitle} />
 

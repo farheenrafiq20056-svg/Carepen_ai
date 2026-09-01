@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase-client";
-import type { SavedNote, UserProfile, ContactMessage } from "@/types";
+import type { SavedNote, UserProfile, ContactMessage, TriageDayCount } from "@/types";
 
 /* ──────────────────────────────────────────────
  *  Authentication helpers (email / password only)
@@ -220,6 +220,67 @@ export async function deleteNote(noteId: string) {
   if (error) {
     console.error("deleteNote error:", error.message);
   }
+}
+
+/**
+ * Fetches the signed-in doctor's own notes from the past 7 days and groups
+ * them by local calendar day and urgency level (Low / Medium / High).
+ * RLS guarantees only the caller's own rows are ever returned.
+ */
+export async function fetchTriageTrends(userId: string): Promise<TriageDayCount[]> {
+  const supabase = createClient();
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setDate(startOfDay.getDate() - 6);
+
+  const { data, error } = await supabase
+    .from("notes")
+    .select("created_at, urgency_level")
+    .eq("user_id", userId)
+    .gte("created_at", startOfDay.toISOString());
+
+  if (error || !data) {
+    console.error("fetchTriageTrends error:", error?.message);
+    return [];
+  }
+
+  // Build the 7-day bucket skeleton (oldest → today), keyed by local date
+  const localDateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  const days: TriageDayCount[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push({
+      date: localDateKey(d),
+      label: d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }),
+      Low: 0,
+      Medium: 0,
+      High: 0,
+    });
+  }
+
+  const bucketByDate = new Map(days.map((d) => [d.date, d]));
+
+  for (const row of data) {
+    // created_at is a UTC timestamptz — bucket it into the local calendar day
+    const key = localDateKey(new Date(row.created_at));
+    const bucket = bucketByDate.get(key);
+    if (!bucket) continue;
+    const level: "Low" | "Medium" | "High" = ["Low", "Medium", "High"].includes(
+      row.urgency_level
+    )
+      ? row.urgency_level
+      : "Low";
+    bucket[level] += 1;
+  }
+
+  return days;
 }
 
 /* ──────────────────────────────────────────────
