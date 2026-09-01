@@ -37,5 +37,6 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
-# Misc
+# Vercel
 .vercel
+.vercel-tmp
